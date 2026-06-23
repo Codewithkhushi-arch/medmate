@@ -76,29 +76,68 @@ tests/                  pytest suite (no live API calls required)
 
 ## Setup
 
+### Prerequisites
+- Python 3.10 or higher
+- A free Google AI Studio API key from [aistudio.google.com](https://aistudio.google.com)
+
+### Installation
+
 ```bash
-git clone <this-repo>
-cd medmate
-cp .env.example .env   # then fill in GOOGLE_API_KEY
+# 1. Clone the repo
+git clone https://github.com/Codewithkhushi-arch/medmate
+cd medmate/medmate
+
+# 2. Create and activate a virtual environment
+python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# Mac/Linux
+source venv/bin/activate
+
+# 3. Install dependencies
 pip install -r requirements.txt
-pytest tests/           # 6 tests, no API key needed
-adk run medmate_agent   # interactive local session, needs API key
+
+# 4. Add your API key
+cp .env.example .env
+# Open .env and replace the placeholder with your real GOOGLE_API_KEY
+
+# 5. Run the tests (no API key needed)
+pytest tests/           # should show 8 passed
+
+# 6. Run the interactive agent
+adk run medmate_agent
 ```
 
+### Try these prompts in order
+Once `adk run medmate_agent` starts and shows `[user]:`, paste each of these:
+
+1. `I take 500mg metformin twice a day with food` → scheduler_agent
+2. `did I miss any doses today?` → missed dose check
+3. `is it safe with warfarin and aspirin too?` → interaction_checker_agent via MCP server
+4. `I have 10 pills left, when do I need to refill?` → refill_agent
+5. `Grant access to caregiver_joe` → consent registry
+6. `show my security audit logs` → filtered audit trail
+
+### Browser UI (optional)
+For a visual interface with agent routing traces:
+```bash
+adk web .
+```
+Then open `http://127.0.0.1:8000` in your browser.
+
 ### Standalone MCP Server Testing
-The drug interaction safety checker uses a standalone FastMCP server. It runs automatically as a subprocess via ADK's `McpToolset` during execution. If you want to verify or debug the MCP server in isolation:
+The drug interaction checker runs as a separate process. To test it in isolation:
 ```bash
 python -m mcp_server.drug_interaction_server
 ```
 
-### Medication Parser Skill
-The folder `skills/medication-parser` contains the skill definitions that prompt the scheduler agent to parse complex, unstructured natural language entries into structured scheduling parameters (`medication_name`, `dosage`, `times_per_day`, `notes`).
-
-Try saying: *"I take 500mg metformin twice a day with food"*, then
-*"did I miss any doses today?"* (to run the missed dose check tool), then
-*"is it safe with warfarin and aspirin too?"*, then *"when do I need to
-refill the metformin if I have 10 pills left?"* — each question routes to
-a different sub-agent automatically.
+### Demo script
+To run the full consent-gate demonstration (grant access, authorized check, blocked access):
+```bash
+python demo_consent_gate.py
+```
 
 ## Design choices worth calling out
 
