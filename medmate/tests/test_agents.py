@@ -80,3 +80,35 @@ def test_check_missed_doses():
     # Check missed doses - should now be empty
     missed_res = check_missed_doses(ctx)
     assert missed_res["count"] == 0
+
+
+def test_pii_scrubbing():
+    # Test scrub_pii directly
+    from medmate_agent.tools.security_gate import scrub_pii, consent_gate_callback, AUDIT_LOG
+    
+    text = "My email is user@example.com, call me at 123-456-7890. SSN is 999-12-3456."
+    redacted = scrub_pii(text)
+    assert "[REDACTED EMAIL]" in redacted
+    assert "[REDACTED PHONE]" in redacted
+    assert "[REDACTED SSN]" in redacted
+    assert "user@example.com" not in redacted
+    assert "123-456-7890" not in redacted
+    assert "999-12-3456" not in redacted
+
+    # Test consent_gate_callback scrubs user_content
+    class FakePart:
+        def __init__(self, text):
+            self.text = text
+
+    class FakeContent:
+        def __init__(self, text):
+            self.parts = [FakePart(text)]
+
+    ctx = FakeCtx(FakeState({"role": "patient"}))
+    ctx.user_content = FakeContent("Please contact me at test@test.com")
+    
+    consent_gate_callback(ctx)
+    assert ctx.user_content.parts[0].text == "Please contact me at [REDACTED EMAIL]"
+    
+    # Check that it logged to audit log
+    assert any(log["event"] == "pii_redacted" for log in AUDIT_LOG)
