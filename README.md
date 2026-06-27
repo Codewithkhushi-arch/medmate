@@ -53,25 +53,26 @@ re-implemented per feature.
 
 | Concept | Where it shows up |
 |---|---|
-| Multi-agent system (ADK) | `medmate_agent/agent.py` — root orchestrator with 3 sub-agents, automatic intent-based routing |
-| MCP Server | `mcp_server/drug_interaction_server.py` — standalone FastMCP server; consumed via `McpToolset` in `medmate_agent/tools/interaction_mcp_client.py` |
+| Multi-agent system (ADK) | `medmate/medmate_agent/agent.py` — root orchestrator with 3 sub-agents, automatic intent-based routing |
+| MCP Server | `medmate/mcp_server/drug_interaction_server.py` — standalone FastMCP server; consumed via `McpToolset` in `medmate/medmate_agent/tools/interaction_mcp_client.py` |
 | Antigravity | Built and iterated in the Antigravity IDE using the ADK 2.0 graph workflow + `agents-cli` toolchain |
-| Security features | `medmate_agent/tools/security_gate.py` (consent gate + audit log) and `security/THREAT_MODEL.md` (full STRIDE writeup) |
-| Deployability | `deploy/DEPLOYMENT.md` — reproducible `agents-cli deploy agent-runtime` steps |
-| Agent skills | `skills/medication-parser/SKILL.md` — Antigravity Skill for parsing free-text medication descriptions |
+| Security features | `medmate/medmate_agent/tools/security_gate.py` (consent gate + audit log) and `medmate/security/THREAT_MODEL.md` (full STRIDE writeup) |
+| Deployability | `medmate/deploy/DEPLOYMENT.md` — reproducible `agents-cli deploy agent-runtime` steps |
+| Agent skills | `medmate/skills/medication-parser/SKILL.md` — Antigravity Skill for parsing free-text medication descriptions |
 
 ## Project structure
 
 ```
-medmate_agent/         ADK agent package (the deployable unit)
-  agent.py             root_agent (orchestrator)
-  sub_agents/           scheduler_agent, interaction_checker_agent, refill_agent
-  tools/                FunctionTools, MCP client wiring, security gate
-mcp_server/             standalone MCP server (drug interaction checks)
-skills/                 Antigravity Skills
-security/               STRIDE threat model
-deploy/                 deployment instructions
-tests/                  pytest suite (no live API calls required)
+medmate/                Main project directory
+  medmate_agent/        ADK agent package (the deployable unit)
+    agent.py            root_agent (orchestrator)
+    sub_agents/         scheduler_agent, interaction_checker_agent, refill_agent
+    tools/              FunctionTools, MCP client wiring, security gate
+  mcp_server/           standalone MCP server (drug interaction checks)
+  skills/               Antigravity Skills
+  security/             STRIDE threat model
+  deploy/               deployment instructions
+  tests/                pytest suite (no live API calls required)
 ```
 
 ## Setup
@@ -147,14 +148,14 @@ python demo_consent_gate.py
 - **The consent gate runs before any sub-agent is reachable**, not as a
   per-tool check, so there's exactly one place to audit for access control
   correctness.
-- **Auditable Security & Log access.** Every security gate choice (`access_granted` / `access_denied`) is logged in the `AUDIT_LOG` variable in `medmate_agent/tools/security_gate.py`.
+- **Auditable Security & Log access.** Every security gate choice (`access_granted` / `access_denied`) is logged in the `AUDIT_LOG` variable in `medmate/medmate_agent/tools/security_gate.py`.
 - **The interaction checker only ever receives medication names**, never
   the rest of a patient's record, to minimize what crosses into the MCP
   server's process boundary.
 
 ## Known limitations
 
-See `security/THREAT_MODEL.md` for a full list — in short, this is a
+See `medmate/security/THREAT_MODEL.md` for a full list — in short, this is a
 hackathon-scoped demo:
 - **In-memory storage**: `_SCHEDULE_DB`, `_INVENTORY_DB`, `_DOSE_LOG`, and the security `AUDIT_LOG` reset on process restart. In production, these should be replaced with Firestore (using Customer-Managed Encryption Keys) and Cloud Logging.
 - **Mock drug interaction table**: The MCP server uses a small local lookup table to avoid requiring external drug API keys during judging.
