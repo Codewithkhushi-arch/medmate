@@ -54,7 +54,7 @@ re-implemented per feature.
 | Concept | Where it shows up |
 |---|---|
 | Multi-agent system (ADK) | `medmate/medmate_agent/agent.py` — root orchestrator with 3 sub-agents, automatic intent-based routing |
-| MCP Server | `medmate/mcp_server/drug_interaction_server.py` — standalone FastMCP server integrated with the NIH RxNav REST API for real-time drug interaction lookups; consumed via `McpToolset` in `medmate/medmate_agent/tools/interaction_mcp_client.py` |
+| MCP Server | `medmate/mcp_server/drug_interaction_server.py` — standalone FastMCP server with NIH RxNav API integration for real clinical drug interaction data, with local fallback table |
 | Antigravity | Built and iterated in the Antigravity IDE using the ADK 2.0 graph workflow + `agents-cli` toolchain |
 | Security features | `medmate/medmate_agent/tools/security_gate.py` (consent gate + audit log) and `medmate/security/THREAT_MODEL.md` (full STRIDE writeup) |
 | Deployability | `medmate/deploy/DEPLOYMENT.md` — reproducible `agents-cli deploy agent-runtime` steps |
@@ -105,7 +105,7 @@ cp .env.example .env
 # Open .env and replace the placeholder with your real GOOGLE_API_KEY
 
 # 5. Run the tests (no API key needed)
-pytest tests/           # should show 8 passed
+pytest tests/           # should show 7 passed
 
 # 6. Run the interactive agent
 adk run medmate_agent
@@ -148,8 +148,8 @@ python demo_consent_gate.py
 - **The consent gate runs before any sub-agent is reachable**, not as a
   per-tool check, so there's exactly one place to audit for access control
   correctness.
-- **PII Scrubbing at the Gate.** The security gate dynamically scans all user input and historical session events, scrubbing out Social Security Numbers, emails, and phone numbers before they can reach the LLM, protecting patient privacy (HIPAA alignment).
 - **Auditable Security & Log access.** Every security gate choice (`access_granted` / `access_denied`) is logged in the `AUDIT_LOG` variable in `medmate/medmate_agent/tools/security_gate.py`.
+- **PII scrubber runs before Gemini.** Sensitive data (emails, phone numbers, SSNs) is redacted before anything is sent to the language model, with every scrubbing event logged to the audit trail.
 - **The interaction checker only ever receives medication names**, never
   the rest of a patient's record, to minimize what crosses into the MCP
   server's process boundary.
@@ -159,7 +159,7 @@ python demo_consent_gate.py
 See `medmate/security/THREAT_MODEL.md` for a full list — in short, this is a
 hackathon-scoped demo:
 - **In-memory storage**: `_SCHEDULE_DB`, `_INVENTORY_DB`, `_DOSE_LOG`, and the security `AUDIT_LOG` reset on process restart. In production, these should be replaced with Firestore (using Customer-Managed Encryption Keys) and Cloud Logging.
-- **RxNav API Connection**: The MCP server queries the official public NIH RxNav API. To prevent failures when offline, it uses a local fallback lookup table.
+- **Drug interaction data**: The MCP server queries the free NIH RxNav API for real clinical interactions, with a local fallback table for offline use or unrecognized drug names.
 - **No authentication layer**: `user_id` is supplied directly for demo purposes. A production deployment would derive the user's identity from Google Identity Platform / OAuth tokens.
 
 
